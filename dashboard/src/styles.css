@@ -6,6 +6,7 @@
 .edge { pointer-events: none; }
 .graph-node { cursor: grab; }
 .graph-node:active { cursor: grabbing; }
+.graph-node circle { transition: none; }
 .graph-actions { display: flex; align-items: center; gap: 12px; }
 .reset-layout { background: transparent; border: 0; color: #3f3f3f; font-size: 12px; padding: 6px; text-decoration: underline; text-underline-offset: 3px; }
 .reset-layout:hover { color: #ff385c; }
