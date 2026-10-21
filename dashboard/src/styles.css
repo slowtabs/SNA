@@ -3,6 +3,7 @@
 /* Direct-manipulation controls for the network canvas. */
 .network { touch-action: none; cursor: grab; }
 .network:active { cursor: grabbing; }
+.network, .network * { user-select: none; -webkit-user-select: none; }
 .edge { pointer-events: none; }
 .graph-node { cursor: grab; }
 .graph-node:active { cursor: grabbing; }
