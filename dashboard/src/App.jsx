@@ -31,7 +31,7 @@ function Graph({ network, result, metric, selected, onSelect, colorMode }) {
       <g transform={`translate(${pan.x} ${pan.y})`}>
       {network.links.map((link, i) => <line key={i} x1={positions[link.source].x} y1={positions[link.source].y} x2={positions[link.target].x} y2={positions[link.target].y} className="edge" />)}
       {network.nodes.map(node => <g key={node.id} className="graph-node" onPointerDown={event=>startNodeDrag(event, node.id)}>
-        <circle cx={positions[node.id].x} cy={positions[node.id].y} r={1.7 + 2.8 * values[node.id] / max} fill={nodeColor(node.id)} className={selected === node.id ? 'selected' : ''} />
+        <circle cx={positions[node.id].x} cy={positions[node.id].y} r={1.7 + 2.8 * values[node.id] / max} fill={nodeColor(node.id)} className={selected === node.id ? 'selected' : ''} style={{ transition: 'none' }} />
         {labels && <text x={positions[node.id].x} y={positions[node.id].y+.9}>{node.id}</text>}
       </g>)}
       </g>
