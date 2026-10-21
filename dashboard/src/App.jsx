@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { analyze, karate, metricTitle, parseNetwork } from './network'
 
 const metrics = ['degree', 'betweenness', 'closeness', 'eigenvector', 'pagerank']
@@ -7,23 +7,36 @@ const pretty = n => Number(n).toLocaleString(undefined, { maximumFractionDigits:
 
 function Graph({ network, result, metric, selected, onSelect, colorMode }) {
   const [labels, setLabels] = useState(true)
-  const positions = useMemo(() => Object.fromEntries(network.nodes.map((node, i) => {
+  const makePositions = () => Object.fromEntries(network.nodes.map((node, i) => {
     const angle = (i / network.nodes.length) * Math.PI * 2 - Math.PI / 2
     const radius = 40 + ((i * 17) % 29)
     return [node.id, { x: 50 + Math.cos(angle) * radius * .56, y: 50 + Math.sin(angle) * radius * .48 }]
-  })), [network])
+  }))
+  const [positions, setPositions] = useState(makePositions)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const drag = useRef(null)
+  const svg = useRef(null)
+  useEffect(() => { setPositions(makePositions()); setPan({ x: 0, y: 0 }) }, [network])
+  const pointer = event => { const box = svg.current.getBoundingClientRect(); return { x: (event.clientX - box.left) * 100 / box.width, y: (event.clientY - box.top) * 100 / box.height } }
+  const startNodeDrag = (event, id) => { event.stopPropagation(); const point = pointer(event); drag.current = { type: 'node', id, start: point, origin: positions[id], moved: false }; svg.current.setPointerCapture(event.pointerId) }
+  const startPan = event => { const point = pointer(event); drag.current = { type: 'pan', start: point, origin: pan, moved: false }; svg.current.setPointerCapture(event.pointerId) }
+  const move = event => { if (!drag.current) return; const point = pointer(event), current = drag.current, dx = point.x - current.start.x, dy = point.y - current.start.y; if (Math.abs(dx) + Math.abs(dy) > .25) current.moved = true; if (current.type === 'node') setPositions(old => ({ ...old, [current.id]: { x: Math.max(-30, Math.min(130, current.origin.x + dx)), y: Math.max(-30, Math.min(130, current.origin.y + dy)) } })); else setPan({ x: current.origin.x + dx, y: current.origin.y + dy }) }
+  const stop = event => { if (!drag.current) return; const current = drag.current; drag.current = null; if (svg.current?.hasPointerCapture(event.pointerId)) svg.current.releasePointerCapture(event.pointerId); if (current.type === 'node' && !current.moved) onSelect(current.id) }
+  const resetLayout = () => { setPositions(makePositions()); setPan({ x: 0, y: 0 }) }
   const values = result[metric], max = Math.max(...Object.values(values), 0.0001)
   const nodeColor = id => colorMode === 'community' ? colors[result.groups[id] % colors.length] : `rgba(255, 56, 92, ${.28 + .72 * values[id] / max})`
   return <section className="panel graph-panel">
-    <div className="section-head"><div><p className="eyebrow">Network view</p><h2>{network.name}</h2></div><label className="toggle"><input type="checkbox" checked={labels} onChange={e=>setLabels(e.target.checked)} /><span>Labels</span></label></div>
-    <svg className="network" viewBox="0 0 100 100" role="img" aria-label="Interactive network graph">
+    <div className="section-head"><div><p className="eyebrow">Network view</p><h2>{network.name}</h2></div><div className="graph-actions"><button className="reset-layout" onClick={resetLayout}>Reset layout</button><label className="toggle"><input type="checkbox" checked={labels} onChange={e=>setLabels(e.target.checked)} /><span>Labels</span></label></div></div>
+    <svg ref={svg} className="network" viewBox="0 0 100 100" role="img" aria-label="Interactive network graph. Drag nodes to arrange them and drag empty space to pan." onPointerDown={startPan} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop}>
+      <g transform={`translate(${pan.x} ${pan.y})`}>
       {network.links.map((link, i) => <line key={i} x1={positions[link.source].x} y1={positions[link.source].y} x2={positions[link.target].x} y2={positions[link.target].y} className="edge" />)}
-      {network.nodes.map(node => <g key={node.id} className="graph-node" onClick={()=>onSelect(node.id)}>
+      {network.nodes.map(node => <g key={node.id} className="graph-node" onPointerDown={event=>startNodeDrag(event, node.id)}>
         <circle cx={positions[node.id].x} cy={positions[node.id].y} r={1.7 + 2.8 * values[node.id] / max} fill={nodeColor(node.id)} className={selected === node.id ? 'selected' : ''} />
         {labels && <text x={positions[node.id].x} y={positions[node.id].y+.9}>{node.id}</text>}
       </g>)}
+      </g>
     </svg>
-    <div className="legend"><span><i className="dot coral"/> {colorMode === 'community' ? 'Detected communities' : `${metricTitle(metric)} score`}</span><span>{network.directed ? 'Directed' : 'Undirected'} · click a node to inspect</span></div>
+    <div className="legend"><span><i className="dot coral"/> {colorMode === 'community' ? 'Detected communities' : `${metricTitle(metric)} score`}</span><span>{network.directed ? 'Directed' : 'Undirected'} · drag nodes to arrange · drag background to pan</span></div>
   </section>
 }
 
