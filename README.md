@@ -63,6 +63,18 @@ jupyter lab
 
 Run the notebooks in numerical order from the repository root. Part 3 is self-contained and can also be run independently. It writes reproducible figures and tables under `results/`.
 
+## Interactive dashboard
+
+The [`dashboard/`](dashboard/README.md) folder adds **Network Lens**, an interactive React dashboard for the same project. It starts with the Karate Club example, accepts browser-local edge-list uploads, calculates the centrality measures used in the notebooks, detects communities, and visualises targeted-removal robustness.
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+It can be hosted on Vercel (set `dashboard` as the Root Directory) and also includes an Electron wrapper for a local desktop version. See the [dashboard guide](dashboard/README.md) for both workflows.
+
 ## Reproducibility
 
 - Python 3.10+ is recommended.
