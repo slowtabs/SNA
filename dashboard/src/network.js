@@ -1,5 +1,7 @@
 const karateEdges = [[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,10],[0,11],[0,12],[0,13],[0,17],[0,19],[0,21],[0,31],[1,2],[1,3],[1,7],[1,13],[1,17],[1,19],[1,21],[1,30],[2,3],[2,7],[2,8],[2,9],[2,13],[2,27],[2,28],[2,32],[3,7],[3,12],[3,13],[4,6],[4,10],[5,6],[5,10],[5,16],[6,16],[8,30],[8,32],[8,33],[9,33],[13,33],[14,32],[14,33],[15,32],[15,33],[18,32],[18,33],[19,33],[20,32],[20,33],[22,32],[22,33],[23,25],[23,27],[23,29],[23,32],[23,33],[24,25],[24,27],[24,31],[25,31],[26,29],[26,33],[27,33],[28,31],[28,33],[29,32],[29,33],[30,32],[30,33],[31,32],[31,33],[32,33]]
 const club = {9:'Officer',14:'Officer',15:'Officer',18:'Officer',20:'Officer',22:'Officer',23:'Officer',24:'Officer',25:'Officer',26:'Officer',27:'Officer',28:'Officer',29:'Officer',30:'Officer',31:'Officer',32:'Officer',33:'Officer'}
+const LARGE_NETWORK_LIMIT = 10000
+export const isLargeNetwork = network => network.nodes.length > 500 || network.links.length > LARGE_NETWORK_LIMIT
 
 export const karate = () => ({
   name: 'Karate Club example', directed: false,
@@ -48,25 +50,27 @@ function normalize(values) { const max = Math.max(...Object.values(values), 0); 
 
 export function analyze(network) {
   const ids = network.nodes.map(n => n.id), n = ids.length, adj = adjacency(network), undirected = undirectedAdjacency(network)
+  const large = isLargeNetwork(network)
   const degree = Object.fromEntries(ids.map(id => [id, (undirected.get(id)?.size || 0) / Math.max(1, n - 1)]))
-  const closeness = Object.fromEntries(ids.map(id => { const d = bfs(undirected, id), reachable = d.size - 1, sum = [...d.values()].reduce((a,b) => a + b, 0); return [id, sum ? (reachable / sum) * (reachable / Math.max(1,n-1)) : 0] }))
-  const betweenness = brandes(network.directed ? adj : undirected, ids)
-  const eigenvector = eigen(undirected, ids)
+  const closeness = large ? sampledCloseness(undirected, ids) : Object.fromEntries(ids.map(id => { const d = bfs(undirected, id), reachable = d.size - 1, sum = [...d.values()].reduce((a,b) => a + b, 0); return [id, sum ? (reachable / sum) * (reachable / Math.max(1,n-1)) : 0] }))
+  const betweenness = brandes(network.directed ? adj : undirected, ids, large ? sampleIds(ids, 64) : ids)
+  const eigenvector = eigen(undirected, ids, large ? 50 : 200)
   const pagerank = pageRank(adj, ids)
-  const groups = girvanNewman(undirected, ids)
+  const groups = large ? labelPropagation(undirected, ids) : girvanNewman(undirected, ids)
   const comps = components(undirected), giant = comps.sort((a,b) => b.length-a.length)[0] || []
   const giantAdj = new Map(giant.map(id => [id, new Set([...undirected.get(id)].filter(x => giant.includes(x)))]))
-  const distances = giant.flatMap(id => [...bfs(giantAdj, id).values()].filter(distance => distance > 0))
-  const triangles = ids.reduce((sum,id) => { const ns = [...undirected.get(id)]; let closed=0; for(let i=0;i<ns.length;i++) for(let j=i+1;j<ns.length;j++) if(undirected.get(ns[i]).has(ns[j])) closed++; return sum + (ns.length > 1 ? (2*closed)/(ns.length*(ns.length-1)) : 0) },0) / n
-  const triples = ids.reduce((s,id) => {const d=undirected.get(id).size; return s+d*(d-1)/2},0), closedTriples = network.links.reduce((s,{source,target}) => s + [...undirected.get(source)].filter(x => undirected.get(target).has(x)).length,0)
+  const pathStats = large ? sampledPathStats(giantAdj, giant) : exactPathStats(giantAdj, giant)
+  const clusteringStats = large ? sampledClustering(undirected, ids) : exactClustering(undirected, ids, network.links)
   return { degree, closeness, betweenness, eigenvector, pagerank, groups, stats: {
     nodes:n, edges:network.links.length, density: n > 1 ? (network.directed ? network.links.length/(n*(n-1)) : 2*network.links.length/(n*(n-1))) : 0,
-    components:comps.length, giant:giant.length, diameter:Math.max(...distances,0), path:distances.length ? distances.reduce((a,b)=>a+b,0)/distances.length : 0,
-    clustering:triangles, transitivity: triples ? closedTriples/triples : 0, averageDegree: n ? 2*network.links.length/n : 0
+    components:comps.length, giant:giant.length, diameter:pathStats.diameter, path:pathStats.path,
+    clustering:clusteringStats.clustering, transitivity:clusteringStats.transitivity, averageDegree: n ? 2*network.links.length/n : 0
   }, robustness: robustness(network, betweenness) }
 }
-function brandes(adj, ids) { const out=Object.fromEntries(ids.map(id=>[id,0])); for (const s of ids) { const stack=[], pred=new Map(ids.map(v=>[v,[]])), sigma=new Map(ids.map(v=>[v,0])), dist=new Map(ids.map(v=>[v,-1])); sigma.set(s,1); dist.set(s,0); const q=[s]; for(let h=0;h<q.length;h++){const v=q[h];stack.push(v);for(const w of adj.get(v)||[]){if(dist.get(w)<0){q.push(w);dist.set(w,dist.get(v)+1)}if(dist.get(w)===dist.get(v)+1){sigma.set(w,sigma.get(w)+sigma.get(v));pred.get(w).push(v)}}}const delta=new Map(ids.map(v=>[v,0])); while(stack.length){const w=stack.pop();for(const v of pred.get(w))delta.set(v,delta.get(v)+(sigma.get(v)/sigma.get(w))*(1+delta.get(w)));if(w!==s)out[w]+=delta.get(w)}} return Object.fromEntries(ids.map(id=>[id,out[id]/Math.max(1,(ids.length-1)*(ids.length-2))])) }
-function eigen(adj, ids) { let x=Object.fromEntries(ids.map(id=>[id,1/Math.sqrt(ids.length)])); for(let k=0;k<200;k++){let y=Object.fromEntries(ids.map(id=>[id,x[id]+[...adj.get(id)].reduce((s,v)=>s+x[v],0)]));const norm=Math.sqrt(Object.values(y).reduce((s,v)=>s+v*v,0))||1; Object.keys(y).forEach(id=>y[id]/=norm);if(Object.keys(y).reduce((s,id)=>s+Math.abs(y[id]-x[id]),0)<1e-8)return y;x=y}return x }
+function sampleIds(ids, limit) { if (ids.length <= limit) return ids; const step = (ids.length - 1) / (limit - 1); return Array.from({ length: limit }, (_, i) => ids[Math.round(i * step)]) }
+function sampledCloseness(adj, ids) { const sums=Object.fromEntries(ids.map(id=>[id,0])), reachable=Object.fromEntries(ids.map(id=>[id,0])); sampleIds(ids,64).forEach(source => bfs(adj,source).forEach((distance,id)=>{if(distance){sums[id]+=distance;reachable[id]++}})); return Object.fromEntries(ids.map(id=>[id,sums[id] ? reachable[id]/sums[id] : 0])) }
+function brandes(adj, ids, sources = ids) { const out=Object.fromEntries(ids.map(id=>[id,0])); for (const s of sources) { const stack=[], pred=new Map(ids.map(v=>[v,[]])), sigma=new Map(ids.map(v=>[v,0])), dist=new Map(ids.map(v=>[v,-1])); sigma.set(s,1); dist.set(s,0); const q=[s]; for(let h=0;h<q.length;h++){const v=q[h];stack.push(v);for(const w of adj.get(v)||[]){if(dist.get(w)<0){q.push(w);dist.set(w,dist.get(v)+1)}if(dist.get(w)===dist.get(v)+1){sigma.set(w,sigma.get(w)+sigma.get(v));pred.get(w).push(v)}}}const delta=new Map(ids.map(v=>[v,0])); while(stack.length){const w=stack.pop();for(const v of pred.get(w))delta.set(v,delta.get(v)+(sigma.get(v)/sigma.get(w))*(1+delta.get(w)));if(w!==s)out[w]+=delta.get(w)}} const scale=ids.length/sources.length; return Object.fromEntries(ids.map(id=>[id,out[id]*scale/Math.max(1,(ids.length-1)*(ids.length-2))])) }
+function eigen(adj, ids, iterations = 200) { let x=Object.fromEntries(ids.map(id=>[id,1/Math.sqrt(ids.length)])); for(let k=0;k<iterations;k++){let y=Object.fromEntries(ids.map(id=>[id,x[id]+[...adj.get(id)].reduce((s,v)=>s+x[v],0)]));const norm=Math.sqrt(Object.values(y).reduce((s,v)=>s+v*v,0))||1; Object.keys(y).forEach(id=>y[id]/=norm);if(Object.keys(y).reduce((s,id)=>s+Math.abs(y[id]-x[id]),0)<1e-8)return y;x=y}return x }
 function pageRank(adj, ids) { let r=Object.fromEntries(ids.map(id=>[id,1/ids.length]));for(let k=0;k<150;k++){const next=Object.fromEntries(ids.map(id=>[id,.15/ids.length]));const dangling=ids.filter(id=>!adj.get(id).size).reduce((s,id)=>s+r[id],0);ids.forEach(id=>{next[id]+=.85*dangling/ids.length;if(adj.get(id).size)[...adj.get(id)].forEach(v=>next[v]+=.85*r[id]/adj.get(id).size)});if(ids.reduce((s,id)=>s+Math.abs(next[id]-r[id]),0)<1e-9)return next;r=next}return r }
 function girvanNewman(original, ids) {
   // A compact Girvan--Newman implementation is robust for the small networks

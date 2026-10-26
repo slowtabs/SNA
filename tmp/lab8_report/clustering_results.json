@@ -1,0 +1,168 @@
+{
+  "sarcasm": {
+    "documents": 26709,
+    "features": 5000,
+    "cluster_sizes": {
+      "0": 23602,
+      "1": 3107
+    },
+    "majority_map": {
+      "0": 0,
+      "1": 0
+    },
+    "majority_agreement": 0.5610468381444457,
+    "silhouette": 0.0038370033745914823,
+    "terms": [
+      [
+        "man",
+        "area",
+        "just",
+        "woman",
+        "report",
+        "year",
+        "day",
+        "time",
+        "world",
+        "women"
+      ],
+      [
+        "trump",
+        "new",
+        "donald",
+        "donald trump",
+        "new york",
+        "york",
+        "introduces",
+        "introduces new",
+        "says",
+        "president"
+      ]
+    ],
+    "contingency": {
+      "0": {
+        "0": 12932,
+        "1": 2053
+      },
+      "1": {
+        "0": 10670,
+        "1": 1054
+      }
+    }
+  },
+  "anthems": {
+    "documents": 190,
+    "features": 1830,
+    "cluster_sizes": {
+      "0": 24,
+      "1": 34,
+      "2": 35,
+      "3": 39,
+      "4": 58
+    },
+    "silhouette": 0.012747483266532925,
+    "terms": [
+      [
+        "thy",
+        "thee",
+        "land",
+        "god",
+        "love",
+        "stand",
+        "thine",
+        "land love",
+        "defend",
+        "true"
+      ],
+      [
+        "country",
+        "flag",
+        "people",
+        "let",
+        "live",
+        "fatherland",
+        "world",
+        "glory",
+        "long",
+        "forever"
+      ],
+      [
+        "homeland",
+        "thou",
+        "hail",
+        "beloved",
+        "sea",
+        "sun",
+        "land",
+        "love",
+        "dear",
+        "oh"
+      ],
+      [
+        "land",
+        "free",
+        "home",
+        "god",
+        "bless",
+        "great",
+        "people",
+        "let",
+        "oh",
+        "sons"
+      ],
+      [
+        "let",
+        "freedom",
+        "people",
+        "africa",
+        "nation",
+        "liberty",
+        "shall",
+        "unity",
+        "happiness",
+        "sing"
+      ]
+    ],
+    "examples": {
+      "0": [
+        "Azerbaijan",
+        "Cyprus",
+        "France",
+        "Greece",
+        "Iceland",
+        "Norway"
+      ],
+      "1": [
+        "Albania",
+        "Armenia",
+        "Germany",
+        "Malta",
+        "Spain",
+        "Ukraine"
+      ],
+      "2": [
+        "Bulgaria",
+        "Croatia",
+        "Denmark",
+        "Hungary",
+        "Liechtenstein",
+        "Lithuania"
+      ],
+      "3": [
+        "Austria",
+        "Belarus",
+        "Bosnia and Herzegovina",
+        "Czechia",
+        "Estonia",
+        "Finland"
+      ],
+      "4": [
+        "Belgium",
+        "Georgia",
+        "Ireland",
+        "Italy",
+        "Moldova (the Republic of)",
+        "Netherlands (the)"
+      ]
+    }
+  }
+}

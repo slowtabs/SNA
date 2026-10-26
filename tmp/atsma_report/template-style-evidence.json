@@ -1,0 +1,105 @@
+{
+  "input": "C:\\College\\ATSMA\\Lab123BCB7137.docx",
+  "fonts_by_char_count": {
+    "Consolas": 1270
+  },
+  "direct_run_formatting_runs": 295,
+  "direct_paragraph_formatting_paragraphs": 53,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 5,
+      "text": "NAME: Vikhyat Shajee Nambiar\u00a0",
+      "style": "Normal"
+    },
+    {
+      "para_index": 6,
+      "text": "REG NO: 23BCB7137",
+      "style": "Normal"
+    },
+    {
+      "para_index": 7,
+      "text": "COURSE CODE: CSE4039",
+      "style": "Normal"
+    },
+    {
+      "para_index": 8,
+      "text": "COURSE: Advanced Text and Social Media Analytics ",
+      "style": "Normal"
+    },
+    {
+      "para_index": 9,
+      "text": "SLOT: L39-L40\u00a0",
+      "style": "Normal"
+    },
+    {
+      "para_index": 10,
+      "text": "FACULTY NAME: Gundimeda Venugopal",
+      "style": "Normal"
+    },
+    {
+      "para_index": 11,
+      "text": "LAB-1\u00a0",
+      "style": "Normal"
+    }
+  ],
+  "examples": {
+    "direct_run_formatting": [
+      {
+        "para_index": 5,
+        "run_text": "NAME: ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "run_text": "Vikhyat Shajee Nambiar",
+        "style": "Normal"
+      },
+      {
+        "para_index": 5,
+        "run_text": "\u00a0",
+        "style": "Normal"
+      },
+      {
+        "para_index": 6,
+        "run_text": "REG NO: ",
+        "style": "Normal"
+      },
+      {
+        "para_index": 6,
+        "run_text": "2",
+        "style": "Normal"
+      }
+    ],
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 19,
+        "text": "import nltk",
+        "style": "Normal"
+      },
+      {
+        "para_index": 20,
+        "text": "from nltk.tokenize import word_tokenize",
+        "style": "Normal"
+      },
+      {
+        "para_index": 21,
+        "text": "from nltk.corpus import stopwords",
+        "style": "Normal"
+      },
+      {
+        "para_index": 22,
+        "text": "from nltk.probability import FreqDist",
+        "style": "Normal"
+      },
+      {
+        "para_index": 23,
+        "text": "",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}
