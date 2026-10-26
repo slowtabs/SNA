@@ -16,7 +16,9 @@ npm install
 npm run dev
 ```
 
-Import a `.csv`, `.txt`, or edge-list file containing one relationship per line, for example `alice,bob` or `alice bob`. Comments beginning with `#` or `%` are ignored. The dashboard processes the selected file entirely in the browser; it does not upload it anywhere. Toggle **Directed graph** before importing directed data.
+Import a `.csv`, `.txt`, `.dot`, or edge-list file containing one relationship per line, for example `alice,bob` or `alice bob`. Graphviz DOT files using `graph`/`digraph`, `--`/`->`, quoted IDs, and edge attributes such as `[weight=1]` are supported. Comments beginning with `#` or `%` are ignored. The dashboard processes the selected file entirely in the browser; it does not upload it anywhere. Toggle **Directed graph** before importing directed data.
+
+Large edge lists such as SNAP's `facebook_combined.txt` are supported. Networks over 500 nodes or 10,000 edges use sampled centrality/path calculations and fast label-propagation communities so analysis stays responsive in the browser; the graph view samples displayed edges when necessary.
 
 ## Deploy to Vercel
 

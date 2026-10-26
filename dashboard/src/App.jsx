@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { analyze, karate, metricTitle, parseNetwork } from './network'
+import { analyze, isLargeNetwork, karate, metricTitle, parseNetwork } from './network'
 
 const metrics = ['degree', 'betweenness', 'closeness', 'eigenvector', 'pagerank']
 const colors = ['#ff385c', '#460479', '#008a70', '#f59e0b', '#2672eb', '#92174d']
@@ -29,7 +29,7 @@ function Graph({ network, result, metric, selected, onSelect, colorMode }) {
     <div className="section-head"><div><p className="eyebrow">Network view</p><h2>{network.name}</h2></div><div className="graph-actions"><button className="reset-layout" onClick={resetLayout}>Reset layout</button><label className="toggle"><input type="checkbox" checked={labels} onChange={e=>setLabels(e.target.checked)} /><span>Labels</span></label></div></div>
     <svg ref={svg} className="network" viewBox="0 0 100 100" role="img" aria-label="Interactive network graph. Drag nodes to arrange them and drag empty space to pan." onPointerDown={startPan} onPointerMove={move} onPointerUp={stop} onPointerCancel={stop}>
       <g transform={`translate(${pan.x} ${pan.y})`}>
-      {network.links.map((link, i) => <line key={i} x1={positions[link.source].x} y1={positions[link.source].y} x2={positions[link.target].x} y2={positions[link.target].y} className="edge" />)}
+      {(network.links.length > 20000 ? network.links.filter((_, i) => i % Math.ceil(network.links.length / 20000) === 0) : network.links).map((link, i) => <line key={i} x1={positions[link.source].x} y1={positions[link.source].y} x2={positions[link.target].x} y2={positions[link.target].y} className="edge" />)}
       {network.nodes.map(node => <g key={node.id} className="graph-node" onPointerDown={event=>startNodeDrag(event, node.id)}>
         <circle cx={positions[node.id].x} cy={positions[node.id].y} r={1.7 + 2.8 * values[node.id] / max} fill={nodeColor(node.id)} className={selected === node.id ? 'selected' : ''} style={{ transition: 'none' }} />
         {labels && <text x={positions[node.id].x} y={positions[node.id].y+.9}>{node.id}</text>}
@@ -47,18 +47,28 @@ function App() {
   const [directed, setDirected] = useState(false)
   const [colorMode, setColorMode] = useState('metric')
   const [message, setMessage] = useState('Showing the project’s Zachary Karate Club example.')
+  const [loading, setLoading] = useState(false)
   const input = useRef(null)
-  const result = useMemo(() => analyze(network), [network])
+  const [result, setResult] = useState(() => analyze(karate()))
+  useEffect(() => {
+    setLoading(true)
+    const timer = setTimeout(() => {
+      setResult(analyze(network))
+      setLoading(false)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [network])
   const ranking = useMemo(() => network.nodes.map(n => ({ ...n, score: result[metric][n.id] })).sort((a,b)=>b.score-a.score), [network,result,metric])
   const node = network.nodes.find(n => n.id === selected) || network.nodes[0]
-  const importFile = async e => { const file=e.target.files?.[0]; if(!file)return; try { const parsed=parseNetwork(await file.text(), directed, file.name); setNetwork(parsed); setSelected(parsed.nodes[0].id); setMessage(`Loaded ${file.name}. Your file stays in this browser.`) } catch(err) { setMessage(err.message) } }
+  const importFile = async e => { const file=e.target.files?.[0]; if(!file)return; setLoading(true); try { const parsed=parseNetwork(await file.text(), directed, file.name); setNetwork(parsed); setSelected(parsed.nodes[0].id); setMessage(`Loaded ${file.name}. ${isLargeNetwork(parsed) ? 'Large network mode uses sampled centrality and community analysis for responsive performance.' : 'Your file stays in this browser.'}`) } catch(err) { setLoading(false); setMessage(err.message) } finally { e.target.value='' } }
   const loadExample = () => { const next=karate(); setNetwork(next); setSelected('0'); setMessage('Karate Club example loaded — the same dataset used in the notebooks.') }
   const exportResults = () => { const payload={ network:network.name, generatedAt:new Date().toISOString(), stats:result.stats, centrality:Object.fromEntries(network.nodes.map(n=>[n.id,Object.fromEntries(metrics.map(m=>[m,result[m][n.id]]))])), communities:result.groups, robustness:result.robustness }; const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})); const a=document.createElement('a');a.href=url;a.download='network-lens-analysis.json';a.click();URL.revokeObjectURL(url) }
   return <>
     <header><div className="brand"><span className="mark"><b/> <b/> <b/></span><span>Network Lens</span></div><nav><a className="active" href="#workspace">Explore</a><a href="#ranking">Analyze</a><a href="#example" onClick={loadExample}>Example</a></nav><button className="nav-action" onClick={exportResults}>Export analysis</button></header>
-    <main>
+    <main aria-busy={loading}>
+      {loading && <div className="loading-overlay" role="status" aria-live="polite"><div className="loading-card"><span className="spinner" aria-hidden="true"/><strong>Analyzing network</strong><small>Mapping connections and calculating centrality…</small></div></div>}
       <section className="hero"><div><p className="eyebrow">SOCIAL NETWORK ANALYSIS</p><h1>Make every connection count.</h1><p className="lead">Import an edge list or explore the Karate Club network from your group project. Compare influence, detect communities, and test network resilience — all locally.</p></div><div className="project-chip"><span>✓</span> ATSMA group project</div></section>
-      <section className="importer" id="workspace"><div className="import-copy"><span className="upload-icon">↗</span><div><strong>Bring your network</strong><small>CSV, TXT, or whitespace edge list · source,target per line</small></div></div><div className="import-actions"><label className="toggle"><input type="checkbox" checked={directed} onChange={e=>setDirected(e.target.checked)} /><span>Directed graph</span></label><input ref={input} hidden type="file" accept=".csv,.txt,.edges" onChange={importFile}/><button className="secondary" onClick={loadExample}>Load example</button><button className="primary" onClick={()=>input.current?.click()}>Import network <span>→</span></button></div></section>
+      <section className="importer" id="workspace"><div className="import-copy"><span className="upload-icon">↗</span><div><strong>Bring your network</strong><small>CSV, TXT, DOT, or whitespace edge list · source,target per line</small></div></div><div className="import-actions"><label className="toggle"><input type="checkbox" checked={directed} onChange={e=>setDirected(e.target.checked)} /><span>Directed graph</span></label><input ref={input} hidden type="file" accept=".csv,.txt,.edges,.dot" onChange={importFile}/><button className="secondary" onClick={loadExample}>Load example</button><button className="primary" onClick={()=>input.current?.click()}>Import network <span>→</span></button></div></section>
       <p className="status">{message}</p>
       <section className="stat-grid">{[['Nodes',result.stats.nodes],['Edges',result.stats.edges],['Density',pretty(result.stats.density)],['Components',result.stats.components],['Avg. degree',pretty(result.stats.averageDegree)]].map(([label,value])=><article className="stat" key={label}><span>{label}</span><strong>{value}</strong></article>)}</section>
       <section className="controls"><div><p className="eyebrow">ANALYSIS LENS</p><div className="metric-tabs">{metrics.map(m=><button key={m} onClick={()=>setMetric(m)} className={metric===m?'chosen':''}>{metricTitle(m)}</button>)}</div></div><div className="segmented"><button className={colorMode==='metric'?'on':''} onClick={()=>setColorMode('metric')}>Score</button><button className={colorMode==='community'?'on':''} onClick={()=>setColorMode('community')}>Communities</button></div></section>

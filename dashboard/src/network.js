@@ -12,6 +12,24 @@ export const karate = () => ({
 export function parseNetwork(text, directed = false, name = 'Uploaded network') {
   const links = []
   const ids = new Set()
+  const dot = /^\s*(?:strict\s+)?(?:graph|digraph)\b/i.test(text)
+  if (dot) {
+    const body = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    const idPattern = String.raw`"(?:\\.|[^"])*"|[-+]?(?:\d+(?:\.\d*)?|\.\d+)|[A-Za-z_\u0080-\uffff][\w\u0080-\uffff]*`
+    const unquote = value => value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1).replace(/\\"/g, '"') : value
+    body.split(/\r?\n/).forEach(line => {
+      const clean = line.trim()
+      if (!clean || /^(?:strict\s+)?(?:graph|digraph)\b/i.test(clean) || clean === '}' || clean.startsWith('[')) return
+      const edge = clean.match(new RegExp(String.raw`^\s*(${idPattern})\s*(--|->)\s*(${idPattern})(?=\s|;|\[|$)`))
+      if (edge) {
+        const source = unquote(edge[1]), target = unquote(edge[3])
+        ids.add(source); ids.add(target); links.push({ source, target })
+        return
+      }
+      const node = clean.match(new RegExp(String.raw`^\s*(${idPattern})\s*(?:\[[^\]]*\])?\s*;\s*$`))
+      if (node) ids.add(unquote(node[1]))
+    })
+  } else {
   text.split(/\r?\n/).forEach((line) => {
     const clean = line.trim()
     if (!clean || clean.startsWith('#') || clean.startsWith('%')) return
@@ -19,6 +37,7 @@ export function parseNetwork(text, directed = false, name = 'Uploaded network') 
     if (!source || !target || /^(source|from)$/i.test(source)) return
     ids.add(source); ids.add(target); links.push({ source, target })
   })
+  }
   if (!links.length) throw new Error('No edges found. Use one source,target pair per line.')
   return { name, directed, nodes: [...ids].map(id => ({ id })), links }
 }
@@ -67,6 +86,11 @@ export function analyze(network) {
     clustering:clusteringStats.clustering, transitivity:clusteringStats.transitivity, averageDegree: n ? 2*network.links.length/n : 0
   }, robustness: robustness(network, betweenness) }
 }
+function exactPathStats(adj, ids) { const distances=ids.flatMap(id=>[...bfs(adj,id).values()].filter(distance=>distance>0)); return { diameter:Math.max(...distances,0), path:distances.length ? distances.reduce((a,b)=>a+b,0)/distances.length : 0 } }
+function sampledPathStats(adj, ids) { let count=0, sum=0, diameter=0; sampleIds(ids,64).forEach(id=>bfs(adj,id).forEach(distance=>{if(distance>0){count++;sum+=distance;diameter=Math.max(diameter,distance)}})); return { diameter, path:count ? sum/count : 0 } }
+function exactClustering(adj, ids, links) { const clustering=ids.reduce((sum,id)=>{const ns=[...adj.get(id)];let closed=0;for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++)if(adj.get(ns[i]).has(ns[j]))closed++;return sum+(ns.length>1?(2*closed)/(ns.length*(ns.length-1)):0)},0)/ids.length; const triples=ids.reduce((s,id)=>s+adj.get(id).size*(adj.get(id).size-1)/2,0), closed=links.reduce((s,{source,target})=>s+[...adj.get(source)].filter(x=>adj.get(target).has(x)).length,0); return { clustering, transitivity:triples?closed/triples:0 } }
+function sampledClustering(adj, ids) { const sample=sampleIds(ids,256), values=sample.map(id=>{const ns=[...adj.get(id)];let closed=0;for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++)if(adj.get(ns[i]).has(ns[j]))closed++;return ns.length>1?(2*closed)/(ns.length*(ns.length-1)):0}); return { clustering:values.reduce((a,b)=>a+b,0)/values.length, transitivity:values.reduce((a,b)=>a+b,0)/values.length } }
+function labelPropagation(adj, ids) { const labels=Object.fromEntries(ids.map(id=>[id,id])); for(let iteration=0;iteration<20;iteration++){let changed=false;for(const id of ids){const counts={};for(const neighbor of adj.get(id)){const label=labels[neighbor];counts[label]=(counts[label]||0)+1}const best=Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0];if(best&&labels[id]!==best[0]){labels[id]=best[0];changed=true}}if(!changed)break}const groups={};Object.values(labels).forEach(label=>{if(groups[label]===undefined)groups[label]=Object.keys(groups).length});return Object.fromEntries(ids.map(id=>[id,groups[labels[id]]])) }
 function sampleIds(ids, limit) { if (ids.length <= limit) return ids; const step = (ids.length - 1) / (limit - 1); return Array.from({ length: limit }, (_, i) => ids[Math.round(i * step)]) }
 function sampledCloseness(adj, ids) { const sums=Object.fromEntries(ids.map(id=>[id,0])), reachable=Object.fromEntries(ids.map(id=>[id,0])); sampleIds(ids,64).forEach(source => bfs(adj,source).forEach((distance,id)=>{if(distance){sums[id]+=distance;reachable[id]++}})); return Object.fromEntries(ids.map(id=>[id,sums[id] ? reachable[id]/sums[id] : 0])) }
 function brandes(adj, ids, sources = ids) { const out=Object.fromEntries(ids.map(id=>[id,0])); for (const s of sources) { const stack=[], pred=new Map(ids.map(v=>[v,[]])), sigma=new Map(ids.map(v=>[v,0])), dist=new Map(ids.map(v=>[v,-1])); sigma.set(s,1); dist.set(s,0); const q=[s]; for(let h=0;h<q.length;h++){const v=q[h];stack.push(v);for(const w of adj.get(v)||[]){if(dist.get(w)<0){q.push(w);dist.set(w,dist.get(v)+1)}if(dist.get(w)===dist.get(v)+1){sigma.set(w,sigma.get(w)+sigma.get(v));pred.get(w).push(v)}}}const delta=new Map(ids.map(v=>[v,0])); while(stack.length){const w=stack.pop();for(const v of pred.get(w))delta.set(v,delta.get(v)+(sigma.get(v)/sigma.get(w))*(1+delta.get(w)));if(w!==s)out[w]+=delta.get(w)}} const scale=ids.length/sources.length; return Object.fromEntries(ids.map(id=>[id,out[id]*scale/Math.max(1,(ids.length-1)*(ids.length-2))])) }
