@@ -17,13 +17,3 @@ results/tables/*.csv
 .DS_Store
 Thumbs.db
 .vscode/
-
-# JavaScript dashboard
-dashboard/node_modules/
-dashboard/dist/
-.playwright-mcp/
-dashboard-preview.png
-
-# Scratch build output from report generation
-tmp/
-output/

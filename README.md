@@ -1,6 +1,6 @@
-# Fable Network
+# Social Network Centrality, Communities, and Robustness
 
-Social network centrality, communities, and robustness. We study Zachary's Karate Club network to answer three connected questions:
+Course group project for **Advanced Text and Social Media Analytics (ATSMA)**.  We study Zachary's Karate Club network to answer three connected questions:
 
 1. What does the social network look like?
 2. Which members are structurally important under different definitions of importance?
@@ -13,21 +13,17 @@ Social network centrality, communities, and robustness. We study Zachary's Karat
 ├── notebooks/
 │   ├── 01_network_exploration.ipynb
 │   ├── 02_centrality_analysis.ipynb
-│   └── 03_Communities_and_Robustness.ipynb
-├── dashboard/                   # Fable Network React/Electron dashboard
-├── data/                        # Optional network datasets (see data/README.md)
-├── reports/                     # Final project report (PDF and DOCX)
+│   └── 03_communities_and_robustness.ipynb
 ├── src/                         # Reusable loading, metric, and plotting helpers
 ├── tests/                       # Algorithm-validation tests
 ├── results/
 │   ├── figures/                 # Generated charts (notebook output)
 │   └── tables/                  # Generated CSV files (notebook output)
 ├── requirements.txt
-├── pytest.ini
 └── .gitignore
 ```
 
-The project is intentionally delivered through three focused notebooks rather than one monolithic file.
+The original single-file submission is retained as `SNA_Centrality_Analysis.ipynb` for reference. The project is intentionally delivered through three focused notebooks rather than one monolithic file.
 
 ## Collaboration workflow
 
@@ -36,7 +32,7 @@ The maintainer should publish the project foundation and Part 1 first. The other
 | Contributor | Branch | Files owned by the pull request |
 | --- | --- | --- |
 | Member 2 | `feature/centrality-analysis` | `src/centrality_algorithms.py`, `notebooks/02_centrality_analysis.ipynb`, and `tests/test_centrality_algorithms.py` |
-| Member 3 | `feature/communities-robustness` | `notebooks/03_Communities_and_Robustness.ipynb` and result-export additions |
+| Member 3 | `feature/communities-robustness` | `notebooks/03_communities_and_robustness.ipynb` and result-export additions |
 
 Each contributor should write their own commit message, verify the notebook, open the pull request from their GitHub account, and respond to at least one review comment. This produces a transparent contribution history and makes the project easy to evaluate.
 
@@ -46,7 +42,7 @@ Each contributor should write their own commit message, verify the notebook, ope
 | --- | --- | --- | --- |
 | 1 | `01_network_exploration.ipynb` | Member 1 | Dataset loading, network statistics, EDA and visualisation |
 | 2 | `02_centrality_analysis.ipynb` | Member 2 | Centrality metrics, manual algorithms and validation |
-| 3 | `03_Communities_and_Robustness.ipynb` | Member 3 | Community-history comparison, robustness and directed-network extension |
+| 3 | `03_communities_and_robustness.ipynb` | Member 3 | Community-history comparison, robustness and directed-network extension |
 
 All members should review the final README, interpretation, and presentation slides. Replace the suggested ownership labels with your names before submission.
 
@@ -66,18 +62,6 @@ jupyter lab
 ```
 
 Run the notebooks in numerical order from the repository root. Part 3 is self-contained and can also be run independently. It writes reproducible figures and tables under `results/`.
-
-## Interactive dashboard
-
-The [`dashboard/`](dashboard/README.md) folder adds **Fable Network**, an interactive React dashboard for the same project. It starts with the Karate Club example, accepts browser-local edge-list uploads, calculates the centrality measures used in the notebooks, detects communities, and visualises targeted-removal robustness.
-
-```bash
-cd dashboard
-npm install
-npm run dev
-```
-
-It can be hosted on Vercel (set `dashboard` as the Root Directory) and also includes an Electron wrapper for a local desktop version. See the [dashboard guide](dashboard/README.md) for both workflows.
 
 ## Reproducibility
 
